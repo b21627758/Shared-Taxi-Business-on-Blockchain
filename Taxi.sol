@@ -4,17 +4,14 @@ contract TaxiPartnership{
     
     // Elections
     uint8 carPurcahseVoteCounter;
-    mapping(bytes32=>eStat) voteInk1;
-    uint32 version1;
+   
     
     uint8 carSellVoteCounter;
-    mapping(bytes32=>eStat) voteInk2;
-    uint32 version2;
+   
     
     
     uint approveDriverVoteCounter;
-    mapping(bytes32=>eStat) voteInk3;
-    uint32 version3;
+    
     
     uint256 salaryTimer;
     uint256 expencesTimer;
@@ -46,6 +43,9 @@ contract TaxiPartnership{
         address payable wallet;
         uint256 balance;
         bool flag;
+        bool voteInk1;
+        bool voteInk2;
+        bool voteInk3;
     }
     
     // Participants Mapped With addresses    
@@ -95,7 +95,7 @@ contract TaxiPartnership{
     }
     
     modifier checkFee(){
-        require(msg.value==100 ether);
+        require(msg.value==10 ether);
         _;
     }
     
@@ -125,7 +125,7 @@ contract TaxiPartnership{
     }
     
     modifier onlyOnce1(){
-        require(voteInk1[keccak256(version1, msg.sender)] == eStat.EXPIRED);
+        require(!participants[msg.sender].voteInk1);
         _;
     }
     
@@ -145,7 +145,7 @@ contract TaxiPartnership{
     }
     
      modifier onlyOnce2(){
-        require(voteInk2[keccak256(version2, msg.sender)] == eStat.EXPIRED);
+        require(!participants[msg.sender].voteInk2);
         _;
     }
     
@@ -160,7 +160,7 @@ contract TaxiPartnership{
     }
     
      modifier onlyOnce3(){
-        require(voteInk3[keccak256(version3, msg.sender)] == eStat.EXPIRED);
+        require(!participants[msg.sender].voteInk3);
         _;
     }
     
@@ -220,13 +220,13 @@ contract TaxiPartnership{
          _;
      }
      
-    function join() public
+    function join() public payable
     checkPlace
     checkFee
     checkExistance
     {
         balance+=msg.value;
-        participant memory temp = participant(msg.sender,0,true);
+        participant memory temp = participant(msg.sender,0,true,false,false,false);
         participants[msg.sender] = temp;
         Iparticipants[participantCounter++] = temp;
     }
@@ -241,8 +241,8 @@ contract TaxiPartnership{
     dealerPrivilege
     {   
         delete proposedCar;
-        version1++;
         delete carPurcahseVoteCounter;
+        resetElection(1);
         proposedCar = Car(_carID, _price,_offerValidTime, eStat.WAITING);
     }
     
@@ -251,7 +251,6 @@ contract TaxiPartnership{
     checkBuyStateWaiting
     onlyOnce1
     {
-        voteInk1[keccak256(version1, msg.sender)] = eStat.APPROVED;
         carPurcahseVoteCounter++;
     }
     
@@ -267,7 +266,7 @@ contract TaxiPartnership{
         carID = proposedCar.carID;
         expencesTimer = now;
         delete proposedCar;
-        version1++;
+       resetElection(1);
         delete carPurcahseVoteCounter;
         
     }
@@ -276,7 +275,7 @@ contract TaxiPartnership{
     dealerPrivilege
     {
         delete proposeRepurcahse;
-        version2++;
+        resetElection(2);
         delete carSellVoteCounter;
         proposeRepurcahse = Car(_carID, _price, _offerValidTime, eStat.WAITING);
     }
@@ -286,7 +285,7 @@ contract TaxiPartnership{
     checkSellStateWaiting
     onlyOnce2
     {
-        voteInk2[keccak256(version2, msg.sender)] = eStat.APPROVED;
+      
         carSellVoteCounter++;
     }
     
@@ -297,7 +296,7 @@ contract TaxiPartnership{
     {
         balance+=msg.value;
         delete proposeRepurcahse;
-        version2 ++;
+        resetElection(2);
         delete carID;
         delete expencesTimer;
         delete carSellVoteCounter;
@@ -307,7 +306,7 @@ contract TaxiPartnership{
     managerPrivilege
     {
         delete approveDriverVoteCounter;
-        version3++;
+        resetElection(3);
         delete candidateDriver;
         candidateDriver = driver(_driver, salary, 0);
     }
@@ -316,7 +315,6 @@ contract TaxiPartnership{
     participantPrivilege
     onlyOnce3
     {
-        voteInk3[keccak256(version3, msg.sender)] = eStat.APPROVED;
         approveDriverVoteCounter++;
     }
     
@@ -327,7 +325,7 @@ contract TaxiPartnership{
         actualDriver = driver(candidateDriver.wallet, 0,0);
         salaryTimer = now;
         delete candidateDriver;
-        version3++;
+        resetElection(3);
         delete approveDriverVoteCounter;
     }
     
@@ -342,7 +340,7 @@ contract TaxiPartnership{
         delete actualDriver;
     }
     
-    function PayTaxiCharge() public
+    function PayTaxiCharge() public payable
     checkTaxiCharge
     {
         balance+=msg.value;
@@ -398,6 +396,24 @@ contract TaxiPartnership{
     {
         participants[msg.sender].wallet.transfer(participants[msg.sender].balance);
         participants[msg.sender].balance = 0; 
+    }
+    
+    function resetElection(int ink) internal{
+        for(uint i ; i< participantCounter-1 ; i++){
+            participant memory temp = Iparticipants[i];
+            if(ink == 1){
+                temp.voteInk1=false;
+            }else if(ink == 2){
+                temp.voteInk2=false;
+            }else if(ink == 3){
+                temp.voteInk3=false;
+            }else if (ink == -1){
+                temp.voteInk1=false;temp.voteInk1=false;temp.voteInk1=false;
+            }
+            else{
+                
+            }
+        }
     }
     
     function() external{
