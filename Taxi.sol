@@ -35,6 +35,7 @@ contract TaxiPartnership{
         address payable wallet;
         uint32 salary;
         uint32 balance;
+        eStat approvalState;
         
     }
     
@@ -220,6 +221,33 @@ contract TaxiPartnership{
          _;
      }
      
+     
+    function showResult(uint8 selection) public view returns (eStat){
+        if(selection==0){
+            if(carPurcahseVoteCounter>=participantCounter/2){
+                return eStat.APPROVED;
+            }else if(proposedCar.offerValidTime<now){
+                return eStat.EXPIRED;
+            }else{
+                return eStat.WAITING;
+            }
+        }else if(selection==1){
+            if(carSellVoteCounter>=participantCounter/2){
+                return eStat.APPROVED;
+            }else if(proposeRepurcahse.offerValidTime<now){
+                return eStat.EXPIRED;
+            }else{
+                return eStat.WAITING;
+            }
+        }else if(selection==2){
+            if(approveDriverVoteCounter>=participantCounter/2){
+                return eStat.APPROVED;
+            }else{
+                return eStat.WAITING;
+            }
+        }
+    }
+    
     function join() public payable
     checkPlace
     checkFee
@@ -285,7 +313,6 @@ contract TaxiPartnership{
     checkSellStateWaiting
     onlyOnce2
     {
-      
         carSellVoteCounter++;
     }
     
@@ -308,7 +335,7 @@ contract TaxiPartnership{
         delete approveDriverVoteCounter;
         resetElection(3);
         delete candidateDriver;
-        candidateDriver = driver(_driver, salary, 0);
+        candidateDriver = driver(_driver, salary, 0, eStat.WAITING);
     }
     
     function ApproveDriver() public
@@ -322,7 +349,7 @@ contract TaxiPartnership{
     managerPrivilege
     checkFired
     {
-        actualDriver = driver(candidateDriver.wallet, 0,0);
+        actualDriver = driver(candidateDriver.wallet, 0,0,eStat.APPROVED);
         salaryTimer = now;
         delete candidateDriver;
         resetElection(3);
